@@ -1,0 +1,7 @@
+*.sw[a-p]
+*.pyc
+*.log
+*.egg-info
+*.venv/
+build/
+dist/

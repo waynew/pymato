@@ -114,7 +114,6 @@ class Pymato(cmd.Cmd):
             end=end,
             title=title,
         ))
-        print("elapsed", end - start, start, end)
         print(
             self.log[-1].format(self.date_pat),
             file=self._logfile,

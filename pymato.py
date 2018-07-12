@@ -26,23 +26,27 @@ def hms(seconds):
 def pretty_hms(h=0, m=0, s=0):
     '''
     Return the provided h, m, and s in the format HhMmSs. If any of the
-    values are 0, then they will be excluded unless *all* values are zero,
-    in which case, return '0s'.
+    values are 0, then they will be blank spaces unless *all* values are zero,
+    in which case, return '      0s'.
 
     >>> pretty_hms()
-    '0s'
+    '       0s'
     >>> pretty_hms(0,0,0)
-    '0s'
+    '       0s'
     >>> pretty_hms(1,0,0)
-    '1h'
+    ' 1h      '
     >>> pretty_hms(1,2,5)
-    '1h2m5s'
+    ' 1h 2m 5s'
+    >>> pretty_hms(1,2,50)
+    ' 1h 2m50s'
+    >>> pretty_hms(99,23,50)
+    '99h23m50s'
     '''
-    hrs = f'{h}h' if h else ''
-    mins = f'{m}m' if m else ''
-    secs = f'{s}s' if s else ''
+    hrs = f'{h:>2}h' if h else ' '*3
+    mins = f'{m:>2}m' if m else ' '*3
+    secs = f'{s:>2}s' if s else ' '*3
     elapsed_time = f'{hrs}{mins}{secs}'
-    return elapsed_time or '0s'
+    return elapsed_time if elapsed_time.strip() else '       0s'
 
 
 class LogEntry:
@@ -121,6 +125,9 @@ class Pymato(cmd.Cmd):
         self._logfile.flush()
 
     def do_log(self, line):
+        '''
+        Display a log of your time spent.
+        '''
         self.log.sort()
         if self.log:
             date = self.log[0].start.date()
@@ -130,13 +137,37 @@ class Pymato(cmd.Cmd):
             if log.start.date() != date:
                 date = log.start.date()
                 print(f'\n{date}')
-            print('\t', log.elapsed_format(tz=get_localzone()))
+            print(f'\t{log.elapsed_format(tz=get_localzone())}')
             total_time += log.elapsed_seconds
 
         print('-'*30)
-        print(f'\t{pretty_hms(*hms(total_time)):>6} total pomodoro time')
+        print(f'\t{pretty_hms(*hms(total_time)):>9} total pomodoro time')
+
+    def do_track(self, line):
+        '''
+        Start tracking time on an open-ended task. ^c to stop. You will
+        have the option to save (the default) or discard the time.
+        '''
+        start = datetime.now(pytz.utc)
+        try:
+            print('Task -', line)
+            while True:
+                diff = datetime.now(pytz.utc)-start
+                print('\r', str(diff).split('.')[0], sep='', end='')
+                time.sleep(1)
+        except KeyboardInterrupt:
+            end = datetime.now(pytz.utc)
+            print('\n{} time spent, save?'.format(str(diff).split('.')[0]))
+            choice = input('[y]/n: ')
+            if choice.lower() in ('y', 'yes'):
+                self.add_log(title=line, start=start, end=end)
 
     def do_pom(self, line):
+        '''
+        Start recording a pom, with whatever description you provide.
+
+        ^c interrupts your pom, though you can save your current progress.
+        '''
         start = datetime.now(pytz.utc)
         end = start + timedelta(minutes=POM_MINS, seconds=0)
         try:
@@ -147,17 +178,24 @@ class Pymato(cmd.Cmd):
                 time.sleep(1)
             print('\nDone!\a')
         except KeyboardInterrupt:
+            end = datetime.now(pytz.utc)
             print('Aborted - save to log anyway?')
             choice = input('y/[n]: ')
             if choice.lower() in ('y', 'yes'):
-                self.add_log(title=line, start=start, end=datetime.now(pytz.utc))
+                self.add_log(title=line, start=start, end=end)
         else:
             self.add_log(title=line, start=start, end=end)
 
     def do_quit(self, line):
+        '''
+        Quit
+        '''
         return True
 
     def do_EOF(self, line):
+        '''
+        Quit
+        '''
         return self.do_quit(line)
 
     do_q = do_quit

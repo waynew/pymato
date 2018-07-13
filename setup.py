@@ -8,7 +8,7 @@ with open('README.rst') as f:
 
 setup(
     name='pymato',
-    version='0.1.6',
+    version='0.1.7',
     description='Simple command line pomodoro timer',
     long_description=readme,
     author='Wayne Werner',

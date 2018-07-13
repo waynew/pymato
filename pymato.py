@@ -128,12 +128,25 @@ class Pymato(cmd.Cmd):
         '''
         Display a log of your time spent.
         '''
+        def logfilter(entry): return True
+
+        if line.strip():
+            try:
+                filterdate = datetime.strptime(line.strip(), '%Y-%m-%d').date()
+                def logfilter(entry):
+                    return entry.start.date() == filterdate
+            except ValueError:
+                def logfilter(entry):
+                    return entry.title.lower() == line.lower()
         self.log.sort()
-        if self.log:
-            date = self.log[0].start.date()
+        printlogs = [log for log in sorted(self.log) if logfilter(log)]
+        if printlogs:
+            date = printlogs[0].start.date()
             print(date)
         total_time = 0
-        for log in self.log:
+        for log in printlogs:
+            if not logfilter(log):
+                continue
             if log.start.date() != date:
                 date = log.start.date()
                 print(f'\n{date}')

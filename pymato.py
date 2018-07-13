@@ -158,8 +158,8 @@ class Pymato(cmd.Cmd):
         except KeyboardInterrupt:
             end = datetime.now(pytz.utc)
             print('\n{} time spent, save?'.format(str(diff).split('.')[0]))
-            choice = input('[y]/n: ')
-            if choice.lower() in ('y', 'yes'):
+            choice = input('[y]/n: ').strip()
+            if choice.lower() in ('y', 'yes', ''):
                 self.add_log(title=line, start=start, end=end)
 
     def do_pom(self, line):

@@ -1,0 +1,10 @@
+Title: Use temp logfile
+Type: bug
+Status: open
+
+Right now this is a little horked up - if you are tracking or running a pom,
+and you try to check the log it will be empty. Whoops! We don't want that. 
+
+What would probably make better sense is to change this to write the log to a
+temporary file and then swap out the `pymato.log` file with the temp file when
+writing or something.

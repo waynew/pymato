@@ -1,0 +1,7 @@
+Title: Add daily total
+Type: feature
+Status: open
+
+I want to add a daily total to the log output - right now it's just got the
+weekly total. Might also be nice to give a range or list of dates to show the
+log for.

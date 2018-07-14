@@ -1,6 +1,6 @@
 Title: Use temp logfile
 Type: bug
-Status: open
+Status: closed
 
 Right now this is a little horked up - if you are tracking or running a pom,
 and you try to check the log it will be empty. Whoops! We don't want that. 
@@ -8,3 +8,9 @@ and you try to check the log it will be empty. Whoops! We don't want that.
 What would probably make better sense is to change this to write the log to a
 temporary file and then swap out the `pymato.log` file with the temp file when
 writing or something.
+
+
+2018-07-14 08:25:41 - @waynew
+=============================
+
+Fixed this by flushing the logfile during __init__

@@ -111,6 +111,7 @@ class Pymato(cmd.Cmd):
                 entry.format(self.date_pat),
                 file=self._logfile,
             )
+        self._logfile.flush()
 
     def add_log(self, title, start, end):
         self.log.append(LogEntry(

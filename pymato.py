@@ -219,7 +219,7 @@ class Pymato(cmd.Cmd):
 
 
 def main():
-    logfile = Path('pymato.log')
+    logfile = Path(os.environ.get('PYMATO_LOGFILE', 'pymato.log'))
     logfile.touch(exist_ok=True)
     with logfile.open('r+') as f:
         mato = Pymato(logfile=f)

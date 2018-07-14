@@ -9,7 +9,7 @@ from pathlib import Path
 import pytz
 from tzlocal import get_localzone
 
-
+__version__ = '0.1.8'
 POM_MINS = 25
 
 
@@ -198,6 +198,9 @@ class Pymato(cmd.Cmd):
                 self.add_log(title=line, start=start, end=end)
         else:
             self.add_log(title=line, start=start, end=end)
+
+    def do_version(self, line):
+        print(f'pymato {__version__}')
 
     def do_quit(self, line):
         '''

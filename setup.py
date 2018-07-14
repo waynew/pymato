@@ -2,13 +2,27 @@ try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
+from ast import literal_eval
+from contextlib import contextmanager
+from pathlib import Path
 
-with open('README.rst') as f:
+
+@contextmanager
+def opener(filename):
+    with Path(__file__).parent.joinpath(filename).open() as f:
+        yield f
+
+with opener('README.rst') as f:
     readme = f.read()
+
+with opener('pymato.py') as f:
+    for line in f:
+        if line.startswith('__version__'):
+            version = literal_eval(line.partition('=')[2].strip())
 
 setup(
     name='pymato',
-    version='0.1.7',
+    version=version,
     description='Simple command line pomodoro timer',
     long_description=readme,
     author='Wayne Werner',

@@ -47,6 +47,17 @@ ctrl+c. Then it will ask if you'd like to save that pom.
               57m total pomodoro time
 
 
+Would you like to play a sound on completion of your pom? Fortunately your
+shell has already provided that functionality! For most shells, this should
+work correctly:
+
+.. code::
+
+    $ pymato pom "play a sound"; ogg123 chime.ogg; notify-send "Done!"
+
+That should work for most, if not all common shells (bash, fish, zsh).
+
+
 Future Goals
 ------------
 

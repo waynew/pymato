@@ -1,5 +1,5 @@
 """
-Pymato version 0.1.9rc1
+Pymato version 0.1.9rc2
 
 
 # 0.1.9 - UNRELEASED
@@ -19,7 +19,7 @@ from pathlib import Path
 import pytz
 from tzlocal import get_localzone
 
-__version__ = '0.1.9rc1'
+__version__ = '0.1.9rc2'
 POM_MINS = 25
 STATUS_MAP = {
     'achieved': '+',

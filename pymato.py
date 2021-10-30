@@ -1,3 +1,13 @@
+"""
+Pymato version 0.1.9rc1
+
+
+# 0.1.9 - UNRELEASED
+
+- Added statuses in the pomodorouboros style - achieved, focused, distracted,
+  and never evaluated.
+"""
+import re
 import cmd
 import os
 import sys
@@ -9,9 +19,24 @@ from pathlib import Path
 import pytz
 from tzlocal import get_localzone
 
-__version__ = '0.1.8'
+__version__ = '0.1.9rc1'
 POM_MINS = 25
+STATUS_MAP = {
+    'achieved': '+',
+    'focused': '=',
+    'distracted': '-',
+    'never evaluated': '?',
+    None: '?',
+}
 
+STATUS_SYMBOLS = {
+    '+': 'achieved',
+    '=': 'focused',
+    '-': 'distracted',
+    '?': 'never evaluated',
+    }
+
+LOG_PATTERN = re.compile(r'(?P<status>[=+-?]?)\s*(?P<start>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.\d{4}) (?P<end>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.\d{4})(?P<title>.*)$')
 
 def hms(seconds):
     '''
@@ -50,13 +75,14 @@ def pretty_hms(h=0, m=0, s=0):
 
 
 class LogEntry:
-    def __init__(self, start, end, title):
+    def __init__(self, start, end, title, status):
         self.start = start
         self.end = end
         self.title = title
+        self.status = status
 
     def __repr__(self):
-        return f'LogEntry(title={self.title!r}, start={self.start!r}, end={self.end!r})'
+        return f'LogEntry(title={self.title!r}, start={self.start!r}, end={self.end!r}, status={self.status!r})'
 
     def __lt__(self, other):
         return self.start < other.start
@@ -67,7 +93,7 @@ class LogEntry:
             end = self.end.astimezone(tz).strftime(datefmt)
         else:
             end = ' ' * len(start)
-        return f'{start} {end} {self.title}'
+        return f'{STATUS_MAP.get(self.status, "?")} {start} {end} {self.title}'
 
     def elapsed_format(self, tz=pytz.utc):
         elapsed = self.end - self.start
@@ -89,18 +115,19 @@ class Pymato(cmd.Cmd):
         self.date_pat = '%Y-%m-%d %H:%M:%S%z'
         self._logfile.seek(0)
         for line in self._logfile:
-            raw_timestamp_start, raw_timestamp_end, title = line[:24], line[25:49], line[49:]
-            if raw_timestamp_end.strip() == '':
+            m = re.search(LOG_PATTERN, line)
+            if m['end'].strip() == '':
                 end_timestamp = None
             else:
                 end_timestamp = datetime.strptime(
-                    raw_timestamp_end,
+                    m['end'],
                     self.date_pat,
                 )
             self.log.append(LogEntry(
-                start=datetime.strptime(raw_timestamp_start, self.date_pat),
+                start=datetime.strptime(m['start'], self.date_pat),
                 end=end_timestamp,
-                title=title.strip(),
+                title=m['title'].strip(),
+                status=STATUS_SYMBOLS.get(m['status'], '?'),
             ))
         # TODO: Maybe make pymato a context manager? -W. Werner, 2018-01-04
         self._logfile.seek(0)
@@ -227,6 +254,7 @@ def main():
             mato.onecmd(' '.join(sys.argv[1:]))
         else:
             Pymato(logfile=f).cmdloop()
+
 
 if __name__ == '__main__':
     main()

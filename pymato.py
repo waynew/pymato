@@ -36,6 +36,14 @@ STATUS_SYMBOLS = {
     '?': 'never evaluated',
     }
 
+# Yoinked from pomodorouboros
+POINTS = {
+    '+': (1.25, 0.0),
+    '=': (1.0, 0.0),
+    '-': (0.25, 1.0),
+    '?': (0.1, 1.0),
+}
+
 LOG_PATTERN = re.compile(r'(?P<status>[=+-?]?)\s*(?P<start>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.\d{4}) (?P<end>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.\d{4})(?P<title>.*)$')
 
 def hms(seconds):
@@ -74,6 +82,30 @@ def pretty_hms(h=0, m=0, s=0):
     return elapsed_time if elapsed_time.strip() else '       0s'
 
 
+def parse_logs(logfile):
+    logfile.seek(0)
+    log = []
+    date_pat = '%Y-%m-%d %H:%M:%S%z'
+    for line in logfile:
+        m = re.search(LOG_PATTERN, line)
+        # TODO: How should I handle failed parsing log lines? -W. Werner, 2021-10-30
+        if m['end'].strip() == '':
+            end_timestamp = None
+        else:
+            end_timestamp = datetime.strptime(
+                m['end'],
+                date_pat,
+            )
+        log.append(LogEntry(
+            start=datetime.strptime(m['start'], date_pat),
+            end=end_timestamp,
+            title=m['title'].strip(),
+            status=STATUS_SYMBOLS.get(m['status'], '?'),
+        ))
+    logfile.seek(0)
+    return log
+
+
 class LogEntry:
     def __init__(self, start, end, title, status):
         self.start = start
@@ -105,6 +137,107 @@ class LogEntry:
         return (self.end-self.start).total_seconds()
 
 
+class Orouboros(cmd.Cmd):
+    prompt = "pymatorouboros> "
+    def __init__(self, *args, logfile=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._logfile = logfile
+        self.logs = parse_logs(self._logfile)
+
+    @property
+    def score(self):
+        today = datetime.now().date()
+        points_earned = 0
+        points_lost = 0
+        for log in self.logs:
+            if log.start.date() == today:
+                plus, minus = POINTS[STATUS_MAP[log.status]]
+                points_earned += plus
+                points_lost += minus
+        return f'+{points_earned:.1f}/-{points_lost:.1f}'
+
+    @property
+    def current(self):
+        now = datetime.now(pytz.utc)
+        for log in self.logs:
+            if log.start <= now <= log.end:
+                return log
+        return None
+
+    @property
+    def status(self):
+        cur = self.current
+        return ' ' if cur is None else STATUS_MAP[cur.status]
+
+    @property
+    def active(self):
+        cur = self.current
+        if cur is None:
+            return 'No active pom - start to get started'
+        else:
+            return cur.title
+
+    @property
+    def prompt(self):
+        self.logs = parse_logs(self._logfile)
+        return f"pymatorouboros ({self.score}):{self.status}:{self.active}> "
+
+    def dump_logs(self):
+        date_pat = '%Y-%m-%d %H:%M:%S%z'
+        self.logs.sort()
+        self._logfile.seek(0)
+        self._logfile.truncate()
+        for entry in self.logs:
+            print(
+                entry.format(date_pat),
+                file=self._logfile,
+            )
+        self._logfile.flush()
+
+    def do_status(self, line):
+        """
+        status +/=/-/?
+
+        + achieved goal
+        = focused on goal
+        - distracted from goal
+        ? did not actually evaluate goal
+        """
+        status = line.strip()
+        cur = self.current
+        if cur is None:
+            print('ERROR: Cannot set status of non-existent pom!')
+        elif status not in STATUS_SYMBOLS:
+            print(f'ERROR: {status!r} is not a valid status')
+        else:
+            cur.status = STATUS_SYMBOLS[status]
+            self.dump_logs()
+
+    def do_title(self, line):
+        '''
+        title ...
+
+        Set the title of the current pom.
+        '''
+        title = line.strip()
+        cur = self.current
+        if cur is None:
+            print('ERROR: Cannot set title for non-existent pom!')
+        elif not line:
+            print('ERROR: Gotta set a title')
+        else:
+            cur.title = line.strip()
+            self.dump_logs()
+
+    def do_quit(self, line):
+        return True
+
+    def do_EOF(self, line):
+        return self.do_quit(line)
+
+    do_q = do_quit
+
+
 class Pymato(cmd.Cmd):
     prompt = 'pymato> '
     def __init__(self, *args, logfile=None, **kwargs):
@@ -116,6 +249,7 @@ class Pymato(cmd.Cmd):
         self._logfile.seek(0)
         for line in self._logfile:
             m = re.search(LOG_PATTERN, line)
+            # TODO: How should I handle failed parsing log lines? -W. Werner, 2021-10-30
             if m['end'].strip() == '':
                 end_timestamp = None
             else:
@@ -227,6 +361,13 @@ class Pymato(cmd.Cmd):
         else:
             self.add_log(title=line, start=start, end=end)
 
+    def do_orouboros(self, line):
+        o = Orouboros(logfile=self._logfile)
+        if line:
+            o.onecmd(line)
+        else:
+            o.cmdloop()
+
     def do_version(self, line):
         print(f'pymato {__version__}')
 
@@ -250,10 +391,13 @@ def main():
     logfile.touch(exist_ok=True)
     with logfile.open('r+') as f:
         mato = Pymato(logfile=f)
-        if len(sys.argv) > 1:
-            mato.onecmd(' '.join(sys.argv[1:]))
-        else:
-            Pymato(logfile=f).cmdloop()
+        try:
+            if len(sys.argv) > 1:
+                mato.onecmd(' '.join(sys.argv[1:]))
+            else:
+                    Pymato(logfile=f).cmdloop()
+        except KeyboardInterrupt:
+            print('\nBye!')
 
 
 if __name__ == '__main__':

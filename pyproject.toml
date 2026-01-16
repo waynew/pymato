@@ -1,0 +1,48 @@
+[project]
+name = "pymato"
+version = "2026.1.0.dev1"
+description = "Pymato, your friendly neighborhood Pomodoro tool"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+classifiers=[
+    'Development Status :: 3 - Alpha',
+    'Environment :: Console :: Curses',
+    'License :: OSI Approved :: MIT License',
+    'Natural Language :: English',
+    'Operating System :: MacOS :: MacOS X',
+    'Operating System :: POSIX',
+    'Operating System :: Unix',
+    'Programming Language :: Python :: 3.5',
+    'Programming Language :: Python :: 3.6',
+    'Programming Language :: Python :: 3.7',
+    'Topic :: Utilities',
+]
+keywords=[
+    'console',
+    'countdown',
+    'stopwatch',
+    'terminal',
+    'timer',
+    'pomodoro',
+    'textual',
+    'productivity',
+    'office',
+]
+authors = [
+    {name="Wayne Werner", email="wayne@waynewerner.com"},
+]
+maintainers = [
+    {name="Wayne Werner", email="wayne+pymato@waynewerner.com"},
+]
+
+[project.urls]
+homepage = "https://dev.waynewerner.com/pub/pymato"
+
+[project.scripts]
+pymato = "pymato:main"
+
+[dependency-groups]
+dev = [
+    "invoke>=2.2.1",
+]

@@ -13,11 +13,9 @@ import os
 import sys
 import time
 from collections import namedtuple
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from pathlib import Path
 
-import pytz
-from tzlocal import get_localzone
 
 __version__ = '0.1.9rc2'
 POM_MINS = 25
@@ -119,7 +117,7 @@ class LogEntry:
     def __lt__(self, other):
         return self.start < other.start
 
-    def format(self, datefmt, tz=pytz.utc):
+    def format(self, datefmt, tz=UTC):
         start = self.start.astimezone(tz).strftime(datefmt)
         if self.end:
             end = self.end.astimezone(tz).strftime(datefmt)
@@ -127,13 +125,15 @@ class LogEntry:
             end = ' ' * len(start)
         return f'{STATUS_MAP.get(self.status, "?")} {start} {end} {self.title}'
 
-    def elapsed_format(self, tz=pytz.utc):
+    @property
+    def elapsed_format(self):
         elapsed = self.end - self.start
-        return f'{pretty_hms(*hms(elapsed.total_seconds())):>6} {self.title}'
+        status = STATUS_MAP.get(self.status, "?")
+        return f'{status}{pretty_hms(*hms(elapsed.total_seconds())):>6} {self.title}'
 
     @property
     def elapsed_seconds(self):
-        end = self.end or datetime.now(tz=pytz.utc)
+        end = self.end or datetime.now(tz=UTC)
         return (self.end-self.start).total_seconds()
 
 
@@ -158,7 +158,7 @@ class Orouboros(cmd.Cmd):
 
     @property
     def current(self):
-        now = datetime.now(pytz.utc)
+        now = datetime.now(UTC)
         for log in self.logs:
             if log.start <= now <= log.end:
                 return log
@@ -279,6 +279,7 @@ class Pymato(cmd.Cmd):
             start=start,
             end=end,
             title=title,
+            status=STATUS_MAP['never evaluated'],
         ))
         print(
             self.log[-1].format(self.date_pat),
@@ -312,26 +313,26 @@ class Pymato(cmd.Cmd):
             if log.start.date() != date:
                 date = log.start.date()
                 print(f'\n{date}')
-            print(f'\t{log.elapsed_format(tz=get_localzone())}')
+            print(f'\t{log.elapsed_format}')
             total_time += log.elapsed_seconds
 
         print('-'*30)
-        print(f'\t{pretty_hms(*hms(total_time)):>9} total pomodoro time')
+        print(f'\t {pretty_hms(*hms(total_time)):>9} total pomodoro time')
 
     def do_track(self, line):
         '''
         Start tracking time on an open-ended task. ^c to stop. You will
         have the option to save (the default) or discard the time.
         '''
-        start = datetime.now(pytz.utc)
+        start = datetime.now(UTC)
         try:
             print('Task -', line)
             while True:
-                diff = datetime.now(pytz.utc)-start
+                diff = datetime.now(UTC)-start
                 print('\r', str(diff).split('.')[0], sep='', end='')
                 time.sleep(1)
         except KeyboardInterrupt:
-            end = datetime.now(pytz.utc)
+            end = datetime.now(UTC)
             print('\n{} time spent, save?'.format(str(diff).split('.')[0]))
             choice = input('[y]/n: ').strip()
             if choice.lower() in ('y', 'yes', ''):
@@ -343,17 +344,23 @@ class Pymato(cmd.Cmd):
 
         ^c interrupts your pom, though you can save your current progress.
         '''
-        start = datetime.now(pytz.utc)
+        start = datetime.now(UTC)
         end = start + timedelta(minutes=POM_MINS, seconds=0)
+        total = (end - start).total_seconds()
+        box = '█'
+
         try:
             print('Task -', line)
-            while datetime.now(pytz.utc) <= end:
-                diff = end-datetime.now(pytz.utc)
-                print('\r', str(diff).split('.')[0], sep='', end='')
+            while datetime.now(UTC) <= end:
+                diff = end-datetime.now(UTC)
+                percent_done = int((diff.total_seconds()/total)/10)
+                dots = '.'*percent_done
+                boxes = box * (10-percent_done)
+                print(f'\r', f'{dots}{boxes} ', str(diff).split('.')[0], sep='', end='')
                 time.sleep(1)
             print('\nDone!\a')
         except KeyboardInterrupt:
-            end = datetime.now(pytz.utc)
+            end = datetime.now(UTC)
             print('Aborted - save to log anyway?')
             choice = input('y/[n]: ')
             if choice.lower() in ('y', 'yes'):
